@@ -19,7 +19,8 @@ CORE=(
   za.co.flatrocksolutions.appmanager
   za.co.flatrocksolutions.deviceidentifier
 )
-# Harmless leftovers from manufacturing. Only touched with --optional.
+# Factory test / cosmetic apps that run with the system identity and have no user function.
+# Only touched with --optional.
 OPTIONAL=(
   com.AgeTest
   com.example.switchbootanim
@@ -118,15 +119,15 @@ audit() {
   sh pm list packages -3
   echo; echo "== Disabled packages =="
   sh pm list packages -d
-  echo; echo "== Preinstalled apps that can read SMS / contacts / call log AND use the Internet =="
-  for pkg in $(sh pm list packages -s | sed 's/^package://'); do
-    out="$(sh dumpsys package "$pkg" | grep -E "INTERNET: granted=true|READ_SMS: granted=true|READ_CONTACTS: granted=true|READ_CALL_LOG: granted=true")"
-    if echo "$out" | grep -q INTERNET && echo "$out" | grep -qE "READ_SMS|READ_CONTACTS|READ_CALL_LOG"; then
-      echo "- $pkg"
+  echo; echo "== Preinstalled non-Google apps running with the system identity =="
+  echo "(they inherit all system permissions; this is a lead to check, not proof of misbehaviour)"
+  for pkg in $(sh pm list packages -s | sed 's/^package://' | grep -vE '^(android$|com\.android\.|com\.google\.|com\.mediatek)'); do
+    info="$(sh dumpsys package "$pkg" | grep -E 'sharedUser=|codePath=')"
+    if echo "$info" | grep -q 'android.uid.system'; then
+      echo "- $pkg  ($(echo "$info" | grep -o 'codePath=.*' | head -n1))"
     fi
   done
-  echo; echo "Note: many legitimate system apps appear in the last list (Messages, Contacts, Dialer, Google apps)."
-  echo "Look for names you do not recognise, and read docs/PACKAGES.md."
+  echo; echo "Read docs/PACKAGES.md. com.mediatek.* is skipped here (normal platform components)."
 }
 
 find_adb
